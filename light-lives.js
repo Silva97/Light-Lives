@@ -8,11 +8,6 @@
  *****************/
 
 // ---- Languages ---- //
-Sys.toLoad++;
-Data.http("languages.json", "GET", function(res){
-	window.lang = JSON.parse( res.responseText );
-	Sys.loaded++;
-});
 
 var LG = navigator.language;
 if(!/pt-BR|en-US/.test(LG)) LG = "en-US";
