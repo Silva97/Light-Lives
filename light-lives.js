@@ -141,9 +141,12 @@ function init(){
 	
 	rmGame.Start = function(){
 		rmGame.dead   = false;
-		rmGame.maxlig = 50;
+		rmGame.maxlig = 100;
 		
 		new Entity(player, 5, 5);
+		spawnEnemy(300, Math.randombet(10, 400));
+		spawnEnemy(Math.randombet(10, 240), 450);
+		Sys.repeat(5, spawnEnemy);
 		
 		if(Touch.support){
 			vkLeft.style.font = vkRight.style.font  = "100px Agency FB";
@@ -253,7 +256,7 @@ function init(){
 	player.layer  = 1;
 	player.Create = function(){
 		Self.force    = 1;
-		Self.lights   = 50;
+		Self.lights   = 100;
 		Self.incharge = false;
 		Self.shoot    = function(){
 			var asx = prtPlayer.xscale, asy = prtPlayer.yscale, sht;
