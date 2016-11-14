@@ -436,7 +436,7 @@ function init(){
 		} else {
 			Self.speed = 1;
 			if(Self.editD){
-				Self.angle = Math.choice(0, 90, 180, 270);
+				Self.angle = Math.choose(0, 90, 180, 270);
 				Self.editD = false;
 				Sys.delayed(1000, function(){
 					Self.editD = true;
