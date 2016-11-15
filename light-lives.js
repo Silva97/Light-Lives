@@ -183,10 +183,20 @@ function init(){
 		var yy = Game.room.view.y + Game.canvas.height;
 		var pp = Math.radiusGetPoint(400, play.angle);
 		
-		if(Game.room.time%(60*10) == 0)
+		if(Game.room.time%(60*10) == 0 && play.lights < 200)
 			new Entity(light, Math.randombet(0, roomWidth), Math.randombet(0, roomHeight));
 		
-		if(Game.room.time%(60*7) == 0)  spawnEnemy();
+		if(Game.room.time%(60*7) == 0){
+			spawnEnemy();
+			if(play.lights > 200) spawnEnemy();
+			if(play.lights > 250) spawnEnemy();
+			if(play.lights > 300) spawnEnemy();
+		}
+		
+		if(play.lights > 200 && Game.room.time%(60*20) == 0){
+			new Entity(enemyBig, Math.randombet(0, roomWidth), Math.randombet(0, roomHeight));
+		}
+		
 		if(Game.room.time%(60*15) == 0) spawnEnemy(play.x + pp.x, play.y + pp.y);
 	}
 	
@@ -212,11 +222,19 @@ function init(){
 	// ---- Models ---- //
 	light 		= new Model();
 	light.Step1 = function(){
-		var play = player.getEntity(0);
-		if(Math.distance(Self.x, Self.y, play.x, play.y) < 16){
-			play.lights += Math.randombet(5, 20);
+		var play = player.getEntity(0),
+			dis  = Math.distance(Self.x, Self.y, play.x, play.y);
+		if(dis < 16){
+			play.lights += Math.randombet(10, 30);
 			Self.remove();
+		} else if(dis < 64){
+			prtPlayer.emit(Self.x, Self.y, 0.5, Math.randombet(0, 360));
+			Self.speed = 3.1;
+			Self.angle = Math.angle(Self.x, Self.y, play.x, play.y);
+		} else {
+			Self.speed = 0;
 		}
+		
 		if(Game.room.time%10 == 0){
 			prtPlayer.emit(Self.x, Self.y, 0.5, Math.randombet(0, 360));
 			prtPlayer.emit(Self.x, Self.y, 0.5, Math.randombet(0, 360));
@@ -235,7 +253,7 @@ function init(){
 		if(Self.time == 30){
 			Self.remove();
 			var asx = prtPlayer.xscale, asy = prtPlayer.yscale;
-			prtPlayer.setScale(Self.scale, Self.scale);
+			prtPlayer.setScale(0.5 + Self.scale, 0.5 + Self.scale);
 			
 			Sys.repeat(15, function(){
 				prtPlayer.emit(Self.x, Self.y, 3, Math.randombet(0, 360));
@@ -288,6 +306,7 @@ function init(){
 	
 	player.Step1 = function(){
 		if(Self.lights > Game.room.maxlig) Game.room.maxlig = Self.lights;
+		if(Data.load("highscore") < Self.lights) Data.save("highscore", Math.floor(Self.lights));
 		
 		// Hit
 		if( Col.simple.particle(Self, prtEnemy) ){
@@ -326,7 +345,6 @@ function init(){
 			Sys.delayed(1000, function(){
 				var score = Math.floor( Game.room.maxlig );
 				Game.room.dead = true;
-				if(Data.load("highscore") < score) Data.save("highscore", score);
 			});
 			
 			prtPlayer.setScale(asx, asy);
@@ -334,6 +352,21 @@ function init(){
 		}
 		
 		// Attack
+		if(Self.lights > 300 && Game.room.time%3 == 0){
+			Self.enm = null, Self.dis = 70;
+			Sys.withModel(All, function(){
+				if(Self.model == player || Self.model == shoot || Self.model == light) return;
+				
+				var dis = Math.distance(Self.x, Self.y, Other.x, Other.y);
+				if(dis < Other.dis){
+					Other.dis = dis;
+					Other.enm = Self;
+				}
+			});
+			if(Self.enm != null)
+				prtPlayer.emit(Self.x, Self.y, 5, Math.angle(Self.x, Self.y, Self.enm.x, Self.enm.y));
+		}
+		
 		if( !Key.isDown(Key.right) || !Key.isDown(Key.left) ){
 			if(Self.incharge){
 				Self.shoot();
@@ -354,6 +387,60 @@ function init(){
 		
 		if(Game.room.time%2 == 0){
 			prtPlayer.emit(Self.x, Self.y, 0.7, Math.randombet(0, 360));
+		}
+	}
+	
+	enemyBig 	  	= new Model();
+	enemyBig.mask 	= mskCol;
+	enemyBig.Create = function(){
+		Self.life  = 400;
+		Self.editD = false;
+		Self.dir   = 0;
+	}
+	enemyBig.Step1 = function(){
+		var play = player.getEntity(0);
+		
+		// Movement
+		if(Math.distance(Self.x, Self.y, play.x, play.y) > 200){
+			Self.speed = 1;
+			if(Math.random() > 0.8){
+				Self.editD = !Self.editD;
+				Self.dir   = Math.randombet(-5, 5);
+			}
+			
+			if(Self.editD) Self.angle += Self.dir;
+		} else {
+			Self.angle = Math.angle(Self.x, Self.y, play.x, play.y);
+			
+			// Shoot
+			if(Math.random() > 0.95){
+				prtEnemy.emit(Self.x, Self.y, 20, Self.angle);
+			}
+		}
+	
+		if( Col.simple.particle(Self, prtPlayer) ){
+			Self.life -= 1 + (Other.xscale * 2);
+		}
+		
+		// Die
+		if(Self.life <= 0){
+			Self.remove();
+			
+			Sys.repeat(3, function(i){
+				new Entity(light, Self.x + (5*i), Self.y);
+			});
+			return;
+		}
+		
+		limitPosition();
+		
+		if(Math.distance(Game.room.view.x, Game.room.view.y, Self.x, Self.y) > 400) return;
+		
+		if(Game.room.time%2 == 0){
+			prtEnemy.emit(Self.x, Self.y, 0.5, Math.randombet(0, 360));
+			prtEnemy.emit(Self.x, Self.y, 2, Math.randombet(0, 360));
+			prtEnemy.emit(Self.x, Self.y, 4, Math.randombet(0, 360));
+			prtEnemy.emit(Self.x, Self.y, 8, Math.randombet(0, 360));
 		}
 	}
 	
@@ -379,11 +466,6 @@ function init(){
 		} else {
 			Self.speed = 1.5;
 			Self.angle = Math.angle(Self.x, Self.y, play.x, play.y);
-			
-			// Shoot
-			if(Math.random() == 1){
-				prtEnemy.emit(Self.x, Self.y, 15, Self.angle);
-			}
 		}
 		
 		if( Col.simple.particle(Self, prtPlayer) ){
@@ -404,12 +486,14 @@ function init(){
 			}
 			
 			new Entity(light, Self.x, Self.y);
-			new Entity(light, Self.x, Self.y);
+			new Entity(light, Self.x+5, Self.y);
 			return;
 		}
 		
-		prtEnemy.emit(Self.x, Self.y, 1, Math.randombet(0, 360));
 		limitPosition();
+		
+		if(Math.distance(Game.room.view.x, Game.room.view.y, Self.x, Self.y) > 400) return;
+		prtEnemy.emit(Self.x, Self.y, 1, Math.randombet(0, 360));
 	}
 	
 	enemyUV 	   = new Model();
@@ -483,7 +567,7 @@ function init(){
 	enemyLight.Step1 = function(){
 		var play = player.getEntity(0);
 		
-		if(Game.room.time%2 == 0){
+		if(Game.room.time%2 == 0 && Math.distance(Game.room.view.x, Game.room.view.y, Self.x, Self.y) < 400){
 			prtEnemy.emit(Self.x, Self.y, 0.8, Math.randombet(0, 360));
 		}
 		
