@@ -4,7 +4,7 @@
  * Copyright (c) 2016 Luiz Felipe(Superbomber / DieBoy)
  * Distributed under the MIT license.
  *
- * Repository: https://github.com/DieBoy/Light-Lives/
+ * Repository: https://github.com/Silva97/Light-Lives/
  *****************/
 
 // ---- Languages ---- //
